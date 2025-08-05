@@ -1,22 +1,21 @@
 import mongoose from 'mongoose';
-import envConfig from '@/config';
 
-export const connectToDatabase = async () => {
-  if (!envConfig.MONGODB_URL) {
-    throw new Error('MONGODB_URL is not defined');
-  }
+let isConnected = false;
 
-  if (mongoose.connection.readyState >= 1) {
-    console.log('Already connected to MongoDB');
-    return;
-  }
+export const connectToDatabase = async (): Promise<void> => {
+  if (isConnected) return;
+
+  if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI not found');
 
   try {
-    return await mongoose.connect(envConfig.MONGODB_URL, {
-      dbName: envConfig.DB_NAME,
+    await mongoose.connect(process.env.MONGODB_URI, {
+      dbName: 'Ucademy',
     });
-    console.log('Connected to new MongoDB');
+
+    isConnected = true;
+    console.log('MongoDB connected');
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
+    console.error('MongoDB connection error:', error);
+    throw error;
   }
 };
