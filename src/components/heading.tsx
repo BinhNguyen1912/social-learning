@@ -1,0 +1,5 @@
+import React from 'react';
+
+export default function Heading({ children }: { children: React.ReactNode }) {
+  return <h1 className="font-bold text-2xl">{children}</h1>;
+}
