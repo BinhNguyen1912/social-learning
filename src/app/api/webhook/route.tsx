@@ -3,6 +3,7 @@ import { Webhook } from 'svix';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { CreateUser } from '@/lib/actions/user.action';
+import { headers } from 'next/headers';
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
@@ -10,9 +11,9 @@ export async function POST(req: Request) {
     throw new Error('WEBHOOK_SECRET not set');
   }
 
-  const svix_id = req.headers.get('svix-id') ?? '';
-  const svix_timestamp = req.headers.get('svix-timestamp') ?? '';
-  const svix_signature = req.headers.get('svix-signature') ?? '';
+  const svix_id = headers().get('svix-id') ?? '';
+  const svix_timestamp = headers().get('svix-timestamp') ?? '';
+  const svix_signature = headers().get('svix-signature') ?? '';
 
   if (!svix_id || !svix_timestamp || !svix_signature) {
     console.error('Missing Svix headers');
