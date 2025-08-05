@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import envConfig from '@/config';
 import { CreateUser } from '@/lib/actions/user.action';
 import { WebhookEvent } from '@clerk/nextjs/server';
@@ -7,6 +8,8 @@ import { Webhook } from 'svix';
 const webhookSecret: string = envConfig.WEBHOOK_SECRET;
 
 export async function POST(req: Request) {
+  console.log('req', req.headers);
+
   const svix_id = req.headers.get('svix-id') ?? '';
   const svix_timestamp = req.headers.get('svix-timestamp') ?? '';
   const svix_signature = req.headers.get('svix-signature') ?? '';
@@ -15,10 +18,10 @@ export async function POST(req: Request) {
     throw new Error('WEBHOOK_SECRET is not set');
   }
   if (!svix_id || !svix_timestamp || !svix_signature) {
+    console.log('Missing headers');
     return new Response('Bad Request', { status: 400 });
   }
-  const payload = req.json();
-  const body = JSON.stringify(payload);
+  const body = await req.text();
 
   const sivx = new Webhook(webhookSecret);
 
@@ -30,12 +33,18 @@ export async function POST(req: Request) {
       'svix-timestamp': svix_timestamp,
       'svix-signature': svix_signature,
     }) as WebhookEvent;
-  } catch (err) {
-    return new Response('Bad Request', { status: 400 });
+
+    console.log('msg', msg);
+  } catch (err: any) {
+    console.log(err);
+
+    return new Response(err, { status: 400 });
   }
 
   const eventType = msg.type;
-  console.log('POST ~ msg : ', msg);
+
+  console.error('POST ~ msg : ', msg);
+
   if (eventType === 'user.created') {
     const { id, email_addresses, username, image_url } = msg.data;
     const user = await CreateUser({
