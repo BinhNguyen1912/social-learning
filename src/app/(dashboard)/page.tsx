@@ -18,12 +18,12 @@ export default async function Page() {
   //   envConfig.WEBHOOK_SECRET
   // );
   const hi = envConfig.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  const ha = envConfig.WEBHOOK_SECRET;
-
+  const ha = envConfig.CLERK_SECRET_KEY;
+  const webhookSecret: string = envConfig.WEBHOOK_SECRET;
   return (
     <div>
       <Heading>
-        Khám phá {hi} {ha}
+        Khám phá {hi} {ha} {webhookSecret}
       </Heading>
       <CourseGrids>
         <CourseItem />

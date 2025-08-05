@@ -1,71 +1,61 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import envConfig from '@/config';
-import { CreateUser } from '@/lib/actions/user.action';
+import { Webhook } from 'svix';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { Webhook } from 'svix';
-
-const webhookSecret: string = envConfig.WEBHOOK_SECRET;
+import { CreateUser } from '@/lib/actions/user.action';
 
 export async function POST(req: Request) {
-  console.log('req', req.headers);
+  const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+  if (!WEBHOOK_SECRET) {
+    throw new Error('WEBHOOK_SECRET not set');
+  }
 
   const svix_id = req.headers.get('svix-id') ?? '';
   const svix_timestamp = req.headers.get('svix-timestamp') ?? '';
   const svix_signature = req.headers.get('svix-signature') ?? '';
 
-  if (!envConfig.WEBHOOK_SECRET) {
-    throw new Error('WEBHOOK_SECRET is not set');
-  }
   if (!svix_id || !svix_timestamp || !svix_signature) {
-    console.log('Missing headers');
+    console.error('Missing Svix headers');
     return new Response('Bad Request', { status: 400 });
   }
+
   const body = await req.text();
-  console.log('body', body);
+  const svix = new Webhook(WEBHOOK_SECRET);
 
-  const sivx = new Webhook(webhookSecret);
-  console.log('sivx', sivx);
-
-  let msg: WebhookEvent;
+  let evt: WebhookEvent;
 
   try {
-    msg = sivx.verify(body, {
+    evt = svix.verify(body, {
       'svix-id': svix_id,
       'svix-timestamp': svix_timestamp,
       'svix-signature': svix_signature,
     }) as WebhookEvent;
-
-    console.log('msg', msg);
+    console.log('✅ Webhook verified:', evt);
   } catch (err: any) {
-    console.log(err);
-
-    return new Response(err, { status: 400 });
+    console.error('❌ Webhook verify failed:', err.message);
+    return new Response('Webhook verification failed', { status: 400 });
   }
 
-  const eventType = msg.type;
-
-  console.error('POST ~ msg : ', msg);
+  const eventType = evt.type;
 
   if (eventType === 'user.created') {
-    const { id, email_addresses, username, image_url } = msg.data;
-    const user = await CreateUser({
-      cleckId: id!,
-      email: email_addresses[0].email_address!,
-      username: username!,
-      name: username!,
-      avatar: image_url!,
-    });
-    return NextResponse.json(
-      {
-        message: 'OK',
-        user,
-      },
-      { status: 200 }
-    );
+    const { id, email_addresses, username, image_url } = evt.data;
+
+    try {
+      const user = await CreateUser({
+        cleckId: id,
+        email: email_addresses[0].email_address,
+        username: username ?? 'user',
+        name: username ?? 'user',
+        avatar: image_url,
+      });
+
+      return NextResponse.json({ message: 'OK', user }, { status: 200 });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      return new Response('CreateUser failed', { status: 500 });
+    }
   }
 
-  // Rest
-
-  return new Response('OK', { status: 200 });
+  return new Response('Event type not handled', { status: 200 });
 }
