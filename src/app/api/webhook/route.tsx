@@ -1,5 +1,7 @@
 import envConfig from '@/config';
+import { CreateUser } from '@/lib/actions/user.action';
 import { WebhookEvent } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 import { Webhook } from 'svix';
 
 const webhookSecret: string = envConfig.WEBHOOK_SECRET;
@@ -12,7 +14,9 @@ export async function POST(req: Request) {
   if (!envConfig.WEBHOOK_SECRET) {
     throw new Error('WEBHOOK_SECRET is not set');
   }
-
+  if (!svix_id || !svix_timestamp || !svix_signature) {
+    return new Response('Bad Request', { status: 400 });
+  }
   const payload = req.json();
   const body = JSON.stringify(payload);
 
@@ -33,7 +37,21 @@ export async function POST(req: Request) {
   const eventType = msg.type;
   console.log('POST ~ msg : ', msg);
   if (eventType === 'user.created') {
-    console.log(msg.data);
+    const { id, email_addresses, username, image_url } = msg.data;
+    const user = await CreateUser({
+      cleckId: id!,
+      email: email_addresses[0].email_address!,
+      username: username!,
+      name: username!,
+      avatar: image_url!,
+    });
+    return NextResponse.json(
+      {
+        message: 'OK',
+        user,
+      },
+      { status: 200 }
+    );
   }
 
   // Rest
