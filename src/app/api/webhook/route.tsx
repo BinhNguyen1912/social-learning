@@ -22,8 +22,10 @@ export async function POST(req: Request) {
     return new Response('Bad Request', { status: 400 });
   }
   const body = await req.text();
+  console.log('body', body);
 
   const sivx = new Webhook(webhookSecret);
+  console.log('sivx', sivx);
 
   let msg: WebhookEvent;
 
